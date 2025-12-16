@@ -1,0 +1,73 @@
+variant: fcos
+version: 1.5.0
+storage:
+  files:
+    - path: /etc/keepalived/keepalived.conf
+      mode: 0644
+      contents:
+        inline: |
+          vrrp_instance VI_1 {
+              state MASTER
+              interface enp1s0
+
+              virtual_router_id 51
+              priority 101
+              advert_int 1
+              authentication {
+                  auth_type PASS
+                  auth_pass keepalivedpassword
+              }
+              virtual_ipaddress {
+                  ###FLOATINGIP###
+              }
+              track_script {
+                  chk_kube_apiserver
+              }
+          }  
+          vrrp_script chk_kube_apiserver {
+              script "curl -s --insecure https://localhost:6443/healthz || exit 1"
+              interval 2
+              weight -20
+          }
+systemd:
+  units:
+    - name: install-keepalived.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Keepalived Installer
+        After=install-crio.service network-online.target
+        Wants=install-crio.service network-online.target
+        ConditionPathExists=!/usr/sbin/keepalived
+
+        [Service]
+        Type=oneshot
+        TimeoutStartSec=1200
+        ExecStart=/bin/sh -c 'transactional-update -n --no-selfupdate run zypper --no-gpg-checks install -y keepalived; transactional-update apply'
+        RemainAfterExit=true
+
+        [Install]
+        WantedBy=multi-user.target
+    - name: keepalived.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Keepalive Daemon (VRRP and LVS)
+        After=network-online.target syslog.target
+        Wants=network-online.target
+
+        [Service]
+        Type=forking
+        PIDFile=/run/keepalived.pid
+        ExecStartPre=/bin/bash -c ' \
+              while [ ! -e /usr/sbin/keepalived ]; do \
+                echo "Waiting for /usr/sbin/keepalived to exists..."; \
+                sleep 5; \
+              done'
+        ExecStart=/usr/sbin/keepalived -f /etc/keepalived/keepalived.conf -D
+        ExecReload=/bin/kill -HUP $MAINPID
+        Restart=always
+        RestartSec=5s
+
+        [Install]
+        WantedBy=multi-user.target

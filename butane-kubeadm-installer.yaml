@@ -1,0 +1,98 @@
+variant: fcos
+version: 1.5.0
+storage:
+  files:
+    - path: /etc/crio/crio.conf.d/02-cgroup-manager.conf
+      mode: 0644
+      contents:
+        inline: |
+          [crio.runtime]
+          conmon_cgroup = "pod"
+          cgroup_manager = "cgroupfs"
+    - path: /etc/crio/crio.conf.d/02-pod-management.conf
+      mode: 0644
+      contents:
+        inline: |
+          [crio.runtime]
+          default_runtime = "runc"
+
+          [crio.image]
+          pause_image="registry.k8s.io/pause:3.10"
+
+          [crio.network]
+          network_dir = "/etc/cni/net.d"
+          plugin_dir = "/var/opt/cni/bin"
+    - path: /etc/kubernetes/kubeadm-init.yaml
+      mode: 0644
+      contents:
+        inline: |
+          apiVersion: kubeadm.k8s.io/v1beta4
+          kind: InitConfiguration
+          nodeRegistration:
+            kubeletExtraArgs:
+              volume-plugin-dir: "/usr/local/libexec/kubernetes/kubelet-plugins/volume/exec/"
+          ---
+          apiVersion: kubeadm.k8s.io/v1beta4
+          kind: ClusterConfiguration
+          controllerManager:
+            extraArgs:
+              flex-volume-plugin-dir: "/usr/local/libexec/kubernetes/kubelet-plugins/volume/exec/"
+
+systemd:
+  units:
+    - name: install-kubeadm.service
+      enabled: true
+      contents: |-
+        [Unit]
+        Description=kubeadm Installer
+        After=network-online.target syslog.target
+        Wants=network-online.target
+        ConditionPathExists=!/usr/local/bin/kubeadm
+
+        [Service]
+        Type=oneshot
+        TimeoutStartSec=1200
+        Environment=KUBERNETES_VERSION=v1.34.2
+        ExecStartPost=/bin/sh -c ' \
+          /usr/local/bin/kubeadm version; \
+          /usr/local/bin/kubelet --version; \
+          /usr/local/bin/kubectl '
+        ExecStart=/bin/sh -c ' \
+          mkdir -p /etc/systemd/system/kubelet.service.d; \
+          cd /usr/local/bin; curl -L --remote-name-all "https://dl.k8s.io/release/${KUBERNETES_VERSION}/bin/linux/amd64/{kubeadm,kubelet,kubectl}"; sudo chmod +x /usr/local/bin/{kubeadm,kubelet,kubectl}; \
+          curl -sSL "https://raw.githubusercontent.com/kubernetes/release/v0.16.2/cmd/krel/templates/latest/kubelet/kubelet.service" | sed "s:/usr/bin:/usr/local/bin:g" | sudo tee /etc/systemd/system/kubelet.service; \
+          curl -sSL "https://raw.githubusercontent.com/kubernetes/release/v0.16.2/cmd/krel/templates/latest/kubeadm/10-kubeadm.conf" | sed "s:/usr/bin:/usr/local/bin:g" \
+          sed -i "s+KUBELET_CONFIG_ARGS=--config=/var/lib/kubelet/config.yaml+KUBELET_CONFIG_ARGS=--config=/var/lib/kubelet/config.yaml --volume-plugin-dir=/usr/local/libexec/kubernetes/kubelet-plugins/volume/exec+g"| sudo tee /etc/systemd/system/kubelet.service.d/10-kubeadm.conf; \
+          systemctl daemon-reload; systemctl enable --now kubelet; \
+          transactional-update apply'
+        RemainAfterExit=true
+
+        [Install]
+        WantedBy=multi-user.target
+    - name: install-crio.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=cri-o CRI Installer
+        After=install-kubeadm.service network-online.target
+        Wants=install-kubeadm.service network-online.target
+
+        [Service]
+        Type=oneshot
+        TimeoutStartSec=1200
+        Environment=LIBEXECDIR=/usr/local/share
+        Environment=OPT_CNI_BIN_DIR=/var/opt/cni/bin
+        Environment=CRIO_VERSION=v1.34.2
+        ExecStart=/bin/sh -c ' \
+          mkdir -p /var/opt/cni/bin; \
+          mkdir -p /usr/local/libexec; \
+          curl https://storage.googleapis.com/cri-o/artifacts/cri-o.amd64.${CRIO_VERSION}.tar.gz | tar -C /var/tmp -xz; \
+          cd /var/tmp/cri-o; \
+          bash install; \
+          systemctl enable --now crio.service; \
+          rm -rf /var/tmp/cri-o*; \
+          transactional-update apply'
+        RemainAfterExit=true
+
+        [Install]
+        WantedBy=multi-user.target
