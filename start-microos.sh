@@ -2,8 +2,8 @@
 
 vms=(
     "gpmcontrolplane1"
-    # "gpmcontrolplane2"
-    # "gpmcontrolplane3"
+    "gpmcontrolplane2"
+    "gpmcontrolplane3"
     # "gpmworker1"
     # "gpmworker2"
 )
@@ -109,3 +109,6 @@ done
 
 # Cleanup ssh known_hosts as the nodes will be provisioed back-forth
 > ~/.ssh/known_hosts
+
+
+

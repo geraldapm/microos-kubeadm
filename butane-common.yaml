@@ -32,3 +32,12 @@ storage:
           method=manual
           [ipv6]
           method=auto
+    - path: /etc/hosts
+      mode: 0644
+      overwrite: true
+      contents:
+        inline: |
+          127.0.0.1 localhost localhost.localdomain
+          ::1		localhost localhost.localdomain ipv6-localhost ipv6-loopback
+
+          ###IP_ADDRESS### ###HOSTNAME### ###HOSTNAME###.local ###HOSTNAME###.gpm.my.id

@@ -41,8 +41,6 @@ IP_SUBNET=192.168.122.0/24
 IP_RANGE_START=100
 IP_RANGE_CONTROLPLANE1=101
 
-# K3s provisioning token. Change depending on needs.
-K3S_TOKEN="K3S_SECRET_TOKEN"
 ```
 
 - Edit the following env from scripts [./stop-microos.sh](./stop-microos.sh)
@@ -71,49 +69,7 @@ bash start-microos.sh
 ssh root@<controlplanenode> k3s kubectl get node
 ```
 
-- Copy kubeconfig to local if needed (requires kubectl)
-
-```bash
-# Setup kubeconfig
-mkdir -p ~/.kube
-scp root@<controlplanenode>:/etc/rancher/k3s/k3s.yaml ~/.kube/config
-chown -R $(id -u):$(id -g) ~/.kube/config
-chmod 600 ~/.kube/config
-
-sed -i "s/127.0.0.1/$IP_FLOATING/" ~/.kube/config
-```
-
-- Optional: Install headlamp dashboard
-
-```bash
-kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/headlamp/main/kubernetes-headlamp.yaml
-
-kubectl -n kube-system create serviceaccount headlamp-admin
-kubectl create clusterrolebinding headlamp-admin --serviceaccount=kube-system:headlamp-admin --clusterrole=cluster-admin
-
-cat << EOF | kubectl apply -f -
-kind: Service
-apiVersion: v1
-metadata:
-  name: headlamp-nodeport
-  namespace: kube-system
-spec:
-  type: NodePort
-  ports:
-    - port: 80
-      targetPort: 4466
-      nodePort: 30009
-  selector:
-    k8s-app: headlamp
-EOF
-
-## Generate headlamp-admin token to enable login into headlamp web
-kubectl create token headlamp-admin -n kube-system
-
-## Access web with http://<controlplanenode>:30009
-```
-
-- Use with your needs, feel free to play with the K3s Cluster.
+- Use with your needs, feel free to play with the K8s kubeadm Cluster.
 
 ## Cleanup
 
@@ -129,51 +85,12 @@ Poweroff and cleanup all the VMs data
 bash stop-microos.sh --destroy
 ```
 
-## Troubleshooting
+TODO: Automate kubeadm provisioning
 
-Here are the procedures to troubleshoot the installations:
-
-- Reset k3s installation
-
-```bash
-rm -f /usr/local/bin/k3s
-systemctl restart install-k3s
-```
-
-### Control-plane (k3s-server) node
-
-- Check for installation status
+- manual provisioning
+  First controlplane
 
 ```bash
-# Check package installation status. It is usually long because MicroOS will start fetching some repositories metadata
-systemctl status install-k3s
-systemctl status install-k3s-selinux
-systemctl status install-keepalived
+kubeadm init --control-plane-endpoint=192.168.122.99 --apiserver-advertise-address=192.168.122.101 --apiserver-cert-extra-sans=192.168.122.101,192.168.122.99 --pod-network-cidr=10.244.0.0/16 --service-cidr=10.96.0.0/12 --node-name "${HOSTNAME}" --ignore-preflight-errors Swap
 
-# Check the floating IP status
-systemctl status keepalived
-ip addr
-```
-
-- Check for k3s cluster
-
-```bash
-k3s kubectl get node
-systemctl status k3s-server
-```
-
-### Worker (k3s-agent) node
-
-- Check for installation status
-
-```bash
-# Check package installation status. It is usually long because MicroOS will start fetching some repositories metadata
-systemctl status install-k3s
-systemctl status install-k3s-selinux
-```
-
-- Check for k3s cluster state
-
-```bash
-systemctl status k3s-agent
 ```
