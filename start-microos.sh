@@ -110,6 +110,8 @@ EOF
     --graphics vnc,listen=0.0.0.0 --noautoconsole \
     --sysinfo type=fwcfg,entry0.name="opt/com.coreos/config",entry0.file="$CURRENT_DIR/$vm.ign"
 
+    virsh start $vm
+
     # rm -f $vm.ign
 done
 

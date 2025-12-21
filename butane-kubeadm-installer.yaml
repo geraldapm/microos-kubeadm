@@ -108,6 +108,7 @@ systemd:
         Description=cri-o CRI Installer
         After=install-kubeadm.service network-online.target
         Wants=install-kubeadm.service network-online.target
+        ConditionPathExists=!/usr/local/bin/crio
 
         [Service]
         Type=oneshot
