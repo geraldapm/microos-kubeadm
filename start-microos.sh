@@ -54,6 +54,9 @@ for vm in ${vms[*]}; do
 
     sed -i "s+###FLOATINGIP###+$IP_FLOATING+g" butane-keepalived.yaml
 
+    sed -i "s+###POD_CIDR###+$POD_CIDR+g" butane-kubeadm-installer.yaml
+    sed -i "s+###SERVICE_CIDR###+$SERVICE_CIDR+g" butane-kubeadm-installer.yaml
+    sed -i "s+###FLOATINGIP###+$IP_FLOATING+g" butane-kubeadm-installer.yaml
 
     if [[ "$K8S_MODE" == "server"  ]]; then
     cat << EOF > butane-$vm.yaml
@@ -92,6 +95,9 @@ EOF
 
     sed -i "s+$IP_FLOATING+###FLOATINGIP###+g" butane-keepalived.yaml
 
+    sed -i "s+$POD_CIDR+###POD_CIDR###+g" butane-kubeadm-installer.yaml
+    sed -i "s+$SERVICE_CIDR+###SERVICE_CIDR###+g" butane-kubeadm-installer.yaml
+    sed -i "s+$IP_FLOATING+###FLOATINGIP###+g" butane-kubeadm-installer.yaml
 
     virt-install \
     --name=$vm \
