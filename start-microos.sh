@@ -4,8 +4,8 @@ vms=(
     "gpmcontrolplane1"
     "gpmcontrolplane2"
     "gpmcontrolplane3"
-    # "gpmworker1"
-    # "gpmworker2"
+    "gpmworker1"
+    "gpmworker2"
 )
 
 CURRENT_DIR=$(pwd)
