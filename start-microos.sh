@@ -54,6 +54,7 @@ for vm in ${vms[*]}; do
 
 
     if (( IP_RANGE_START == IP_RANGE_CONTROLPLANE1 )); then
+        sed -i "s+###FIRSTNODE_IP###+$IP_ADDR+g" butane-kubeadm.yaml 
         sed -i 's+###KUBEADM_MODE###+systemctl enable --now keepalived; /usr/local/bin/kubeadm init --config /etc/kubernetes/kubeadm-init.yaml; kubeadm token create --print-join-command --certificate-key "\$\(kubeadm init phase upload-certs --upload-certs | tail -n 1\)" > /tmp/controlplane-join.sh; kubeadm token create --print-join-command > /tmp/worker-join.sh+g' butane-kubeadm.yaml 
     elif [[ "$K8S_MODE" == "controlplane"  ]]; then
         sed -i 's+###KUBEADM_MODE###+scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@###FLOATINGIP###:/tmp/controlplane-join.sh /tmp/controlplane-join.sh ;echo "\$\(cat /tmp/controlplane-join.sh\) -v=5" | sudo PATH=/sbin:/usr/sbin:/usr/local/sbin:/root/bin:/usr/local/bin:/usr/bin:/bin bash; systemctl enable --now keepalived+g' butane-kubeadm.yaml 
@@ -113,6 +114,7 @@ EOF
     sed -i "s+$IP_FLOATING+###FLOATINGIP###+g" butane-kubeadm.yaml
 
     if (( IP_RANGE_START == IP_RANGE_CONTROLPLANE1 )); then
+        sed -i "s+$IP_ADDR+###FIRSTNODE_IP###+g" butane-kubeadm.yaml
         sed -i 's+systemctl enable --now keepalived; /usr/local/bin/kubeadm init --config /etc/kubernetes/kubeadm-init.yaml; kubeadm token create --print-join-command --certificate-key "$(kubeadm init phase upload-certs --upload-certs | tail -n 1)" > /tmp/controlplane-join.sh; kubeadm token create --print-join-command > /tmp/worker-join.sh+###KUBEADM_MODE###+g' butane-kubeadm.yaml 
     elif [[ "$K8S_MODE" == "controlplane"  ]]; then
         sed -i 's+scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@###FLOATINGIP###:/tmp/controlplane-join.sh /tmp/controlplane-join.sh ;echo "$(cat /tmp/controlplane-join.sh) -v=5" | sudo PATH=/sbin:/usr/sbin:/usr/local/sbin:/root/bin:/usr/local/bin:/usr/bin:/bin bash; systemctl enable --now keepalived+###KUBEADM_MODE###+g' butane-kubeadm.yaml 
