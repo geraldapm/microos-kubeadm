@@ -50,7 +50,7 @@ systemd:
         Environment=FIRSTNODE_IP="###FIRSTNODE_IP###"
         ExecStartPre=/bin/bash -c 'while true; do \
             if curl -k -s "$APISERVER_ENDPOINT" > /dev/null; then \
-                echo "Exiting loop: Kubernetes API Server is reachable."; sleep 1m; break; \
+                echo "Exiting loop: Kubernetes API Server is reachable."; sleep 30s; break; \
             elif ip addr | grep -q "$FIRSTNODE_IP"; then \
                 echo "Exiting loop: Initializing the first Kubernetes Control-plane Node..."; break; \
             else \
