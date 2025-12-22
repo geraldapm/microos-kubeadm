@@ -19,6 +19,7 @@ storage:
         inline: |-
           ###HOSTNAME###
     - path: /etc/NetworkManager/system-connections/enp1s0.nmconnection
+      overwrite: true
       mode: 0600
       contents:
         inline: |

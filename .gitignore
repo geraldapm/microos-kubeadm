@@ -1,3 +1,4 @@
 *.qcow2
 *.ign
 butane
+butane-ssh.yaml

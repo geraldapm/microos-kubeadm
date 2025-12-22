@@ -1,0 +1,11 @@
+variant: fcos
+version: 1.5.0
+storage:
+  files:
+    ### Enable inter-node ssh to copy kubeadm join token
+    - path: /root/.ssh/id_rsa
+      mode: 0600
+      overwrite: true
+      contents:
+        inline: |-
+          <SSH KEY Goes Here>

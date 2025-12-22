@@ -37,35 +37,6 @@ storage:
           [crio.network]
           network_dir = "/etc/cni/net.d/"
           plugin_dir = "/var/opt/cni/bin"
-    - path: /etc/kubernetes/kubeadm-init.yaml
-      mode: 0644
-      contents:
-        inline: |
-          ---
-          apiVersion: kubeadm.k8s.io/v1beta4
-          kind: InitConfiguration
-          nodeRegistration:
-            kubeletExtraArgs:
-            - name: volume-plugin-dir
-              value: "/usr/local/libexec/kubernetes/kubelet-plugins/volume/exec/"
-          ---
-          apiVersion: kubeadm.k8s.io/v1beta4
-          kind: ClusterConfiguration
-          controlPlaneEndpoint: "###FLOATINGIP###"
-          controllerManager:
-            extraArgs:
-            - name: flex-volume-plugin-dir
-              value: "/usr/local/libexec/kubernetes/kubelet-plugins/volume/exec/"
-          networking:
-            podSubnet: "###POD_CIDR###"
-            serviceSubnet: "###SERVICE_CIDR###"
-          apiServer:
-            certSANs:
-              - "###FLOATINGIP###"
-            extraArgs:
-            - name:  service-node-port-range
-              value: "30000-32767"
-
 systemd:
   units:
     - name: install-kubeadm.service
@@ -83,8 +54,7 @@ systemd:
         Environment=KUBERNETES_VERSION=v1.34.2
         ExecStartPost=/bin/sh -c ' \
           /usr/local/bin/kubeadm version; \
-          /usr/local/bin/kubelet --version; \
-          /usr/local/bin/kubectl version'
+          /usr/local/bin/kubelet --version;'
         ExecStart=/bin/sh -c ' \
           mkdir -p /etc/systemd/system/kubelet.service.d; \
           cd /usr/local/bin; curl -L --remote-name-all "https://dl.k8s.io/release/${KUBERNETES_VERSION}/bin/linux/amd64/{kubeadm,kubelet,kubectl}"; sudo chmod +x /usr/local/bin/{kubeadm,kubelet,kubectl}; \
@@ -124,6 +94,9 @@ systemd:
           bash install; \
           systemctl enable --now crio.service; \
           rm -rf /var/tmp/cri-o*; \
+          cp /usr/local/lib/systemd/system/crio.service /etc/systemd/system/crio.service; \
+          systemctl daemon-reload; \
+          systemctl enable --now crio.service; \
           transactional-update apply'
         RemainAfterExit=true
 

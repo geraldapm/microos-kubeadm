@@ -8,6 +8,36 @@ This repository contains the quick way to deploy a K3s basic HA cluster with Ope
 - MicroOS cloud image with qcow2 format. Download it from there -> https://get.opensuse.org/microos. NOTE: Do not use container host image because it contains podman and K3s does not using podman as its CNI (make it simple and clean).
 - Butane binary executable to convert butane definition into ignition file. Download it from there -> https://github.com/coreos/butane/releases
 
+## Preparing
+
+- Copy butane-ssh.yaml.example to butane-ssh.yaml and edit its contents
+
+```bash
+    ### Enable inter-node ssh to copy kubeadm join token
+    - path: /root/.ssh/id_rsa
+      mode: 0600
+      overwrite: true
+      contents:
+        inline: |-
+          -----BEGIN OPENSSH PRIVATE KEY-----
+          abcdefg.....
+```
+
+- Start the template VMs
+
+```bash
+bash template-microos.sh
+```
+
+- After all installation sequence completed, Reinitialize the ignition config
+
+```bash
+sudo sed -i '/^GRUB_CMDLINE_LINUX=/ s/"$/ ignition.firstboot=1"/' /etc/default/grub
+sudo transactional-update grub.cfg
+```
+
+- Power Off the VM. It is now ready to serve as template VM for our Kubernees Nodes
+
 ## Installing
 
 - Copy the downloaded qcow2 file to working directory.

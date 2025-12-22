@@ -10,7 +10,7 @@ vms=(
 
 CURRENT_DIR=$(pwd)
 
-TEMPLATE_DISK_FILE="$CURRENT_DIR/openSUSE-MicroOS.x86_64-ContainerHost-kvm-and-xen.qcow2"
+TEMPLATE_DISK_FILE="$CURRENT_DIR/gpmtemplate.qcow2"
 
 VCPU=2
 MEMORY_MB=2048
@@ -39,12 +39,12 @@ for vm in ${vms[*]}; do
 
 
     K8S_SERVER_STRING="controlplane"
-    K8S_MODE="server"
+    K8S_MODE="controlplane"
     if [[ "$vm" == *"$K8S_SERVER_STRING"*  ]]; then
-    echo "Starting $vm as kubernetes controlplane node"
+    echo "Starting $vm as kubernetes $K8S_MODE node"
     else
-    echo "Starting $vm as kubernetes worker node"
-    K8S_MODE="agent"
+    K8S_MODE="worker"
+    echo "Starting $vm as kubernetes $K8S_MODE node"
     fi
 
     sed -i "s+###IP_GATEWAY###+$IP_GATEWAY+g" butane-common.yaml
@@ -52,13 +52,22 @@ for vm in ${vms[*]}; do
     sed -i "s+###HOSTNAME###+$vm+g" butane-common.yaml
     sed -i "s+###IP_ADDRESS###+$IP_ADDR+g" butane-common.yaml
 
+
+    if (( IP_RANGE_START == IP_RANGE_CONTROLPLANE1 )); then
+        sed -i 's+###KUBEADM_MODE###+systemctl enable --now keepalived; /usr/local/bin/kubeadm init --config /etc/kubernetes/kubeadm-init.yaml; kubeadm token create --print-join-command --certificate-key "\$\(kubeadm init phase upload-certs --upload-certs | tail -n 1\)" > /tmp/controlplane-join.sh; kubeadm token create --print-join-command > /tmp/worker-join.sh+g' butane-kubeadm.yaml 
+    elif [[ "$K8S_MODE" == "controlplane"  ]]; then
+        sed -i 's+###KUBEADM_MODE###+scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@###FLOATINGIP###:/tmp/controlplane-join.sh /tmp/controlplane-join.sh ;echo "\$\(cat /tmp/controlplane-join.sh\) -v=5" | sudo bash; systemctl enable --now keepalived+g' butane-kubeadm.yaml 
+    else
+        sed -i 's+###KUBEADM_MODE###+scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@###FLOATINGIP###:/tmp/worker-join.sh; echo "\$\(cat /tmp/controlplane-join.sh\) -v=5" | sudo bash+g' butane-kubeadm.yaml 
+    fi
+
     sed -i "s+###FLOATINGIP###+$IP_FLOATING+g" butane-keepalived.yaml
 
-    sed -i "s+###POD_CIDR###+$POD_CIDR+g" butane-kubeadm-installer.yaml
-    sed -i "s+###SERVICE_CIDR###+$SERVICE_CIDR+g" butane-kubeadm-installer.yaml
-    sed -i "s+###FLOATINGIP###+$IP_FLOATING+g" butane-kubeadm-installer.yaml
+    sed -i "s+###POD_CIDR###+$POD_CIDR+g" butane-kubeadm.yaml
+    sed -i "s+###SERVICE_CIDR###+$SERVICE_CIDR+g" butane-kubeadm.yaml
+    sed -i "s+###FLOATINGIP###+$IP_FLOATING+g" butane-kubeadm.yaml
 
-    if [[ "$K8S_MODE" == "server"  ]]; then
+    if [[ "$K8S_MODE" == "controlplane"  ]]; then
     cat << EOF > butane-$vm.yaml
     variant: fcos
     version: 1.5.0
@@ -66,9 +75,11 @@ for vm in ${vms[*]}; do
         config:
             merge:
             - inline: |-
+                $(./butane ./butane-ssh.yaml)
+            - inline: |-
                 $(./butane ./butane-common.yaml)
             - inline: |-
-                $(./butane ./butane-kubeadm-installer.yaml)
+                $(./butane ./butane-kubeadm.yaml)
             - inline: |-
                 $(./butane ./butane-keepalived.yaml)
 EOF
@@ -82,7 +93,9 @@ EOF
             - inline: |-
                 $(./butane ./butane-common.yaml)
             - inline: |-
-                $(./butane ./butane-kubeadm-installer.yaml)
+                $(./butane ./butane-ssh.yaml)
+            - inline: |-
+                $(./butane ./butane-kubeadm.yaml)
 EOF
     fi
     ./butane butane-$vm.yaml > $vm.ign
@@ -95,9 +108,17 @@ EOF
 
     sed -i "s+$IP_FLOATING+###FLOATINGIP###+g" butane-keepalived.yaml
 
-    sed -i "s+$POD_CIDR+###POD_CIDR###+g" butane-kubeadm-installer.yaml
-    sed -i "s+$SERVICE_CIDR+###SERVICE_CIDR###+g" butane-kubeadm-installer.yaml
-    sed -i "s+$IP_FLOATING+###FLOATINGIP###+g" butane-kubeadm-installer.yaml
+    sed -i "s+$POD_CIDR+###POD_CIDR###+g" butane-kubeadm.yaml
+    sed -i "s+$SERVICE_CIDR+###SERVICE_CIDR###+g" butane-kubeadm.yaml
+    sed -i "s+$IP_FLOATING+###FLOATINGIP###+g" butane-kubeadm.yaml
+
+    if (( IP_RANGE_START == IP_RANGE_CONTROLPLANE1 )); then
+        sed -i 's+systemctl enable --now keepalived; /usr/local/bin/kubeadm init --config /etc/kubernetes/kubeadm-init.yaml; kubeadm token create --print-join-command --certificate-key "$(kubeadm init phase upload-certs --upload-certs | tail -n 1)" > /tmp/controlplane-join.sh; kubeadm token create --print-join-command > /tmp/worker-join.sh+###KUBEADM_MODE###+g' butane-kubeadm.yaml 
+    elif [[ "$K8S_MODE" == "controlplane"  ]]; then
+        sed -i 's+scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@###FLOATINGIP###:/tmp/controlplane-join.sh /tmp/controlplane-join.sh ;echo "$(cat /tmp/controlplane-join.sh) -v=5" | sudo bash; systemctl enable --now keepalived+###KUBEADM_MODE###+g' butane-kubeadm.yaml 
+    else
+        sed -i 's+scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@###FLOATINGIP###:/tmp/worker-join.sh; echo "$(cat /tmp/controlplane-join.sh) -v=5" | sudo bash+###KUBEADM_MODE###+g' butane-kubeadm.yaml 
+    fi
 
     virt-install \
     --name=$vm \
@@ -115,7 +136,7 @@ EOF
     # rm -f $vm.ign
 done
 
-# Cleanup ssh known_hosts as the nodes will be provisioed back-forth
+## Cleanup ssh known_hosts as the nodes will be provisioed back-forth
 > ~/.ssh/known_hosts
 
 
