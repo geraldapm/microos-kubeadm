@@ -56,9 +56,9 @@ for vm in ${vms[*]}; do
     if (( IP_RANGE_START == IP_RANGE_CONTROLPLANE1 )); then
         sed -i 's+###KUBEADM_MODE###+systemctl enable --now keepalived; /usr/local/bin/kubeadm init --config /etc/kubernetes/kubeadm-init.yaml; kubeadm token create --print-join-command --certificate-key "\$\(kubeadm init phase upload-certs --upload-certs | tail -n 1\)" > /tmp/controlplane-join.sh; kubeadm token create --print-join-command > /tmp/worker-join.sh+g' butane-kubeadm.yaml 
     elif [[ "$K8S_MODE" == "controlplane"  ]]; then
-        sed -i 's+###KUBEADM_MODE###+scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@###FLOATINGIP###:/tmp/controlplane-join.sh /tmp/controlplane-join.sh ;echo "\$\(cat /tmp/controlplane-join.sh\) -v=5" | sudo bash; systemctl enable --now keepalived+g' butane-kubeadm.yaml 
+        sed -i 's+###KUBEADM_MODE###+scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@###FLOATINGIP###:/tmp/controlplane-join.sh /tmp/controlplane-join.sh ;echo "\$\(cat /tmp/controlplane-join.sh\) -v=5" | sudo PATH=/usr/local/bin bash; systemctl enable --now keepalived+g' butane-kubeadm.yaml 
     else
-        sed -i 's+###KUBEADM_MODE###+scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@###FLOATINGIP###:/tmp/worker-join.sh; echo "\$\(cat /tmp/controlplane-join.sh\) -v=5" | sudo bash+g' butane-kubeadm.yaml 
+        sed -i 's+###KUBEADM_MODE###+scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@###FLOATINGIP###:/tmp/worker-join.sh; echo "\$\(cat /tmp/controlplane-join.sh\) -v=5" | sudo PATH=/usr/local/bin bash+g' butane-kubeadm.yaml 
     fi
 
     sed -i "s+###FLOATINGIP###+$IP_FLOATING+g" butane-keepalived.yaml
@@ -115,9 +115,9 @@ EOF
     if (( IP_RANGE_START == IP_RANGE_CONTROLPLANE1 )); then
         sed -i 's+systemctl enable --now keepalived; /usr/local/bin/kubeadm init --config /etc/kubernetes/kubeadm-init.yaml; kubeadm token create --print-join-command --certificate-key "$(kubeadm init phase upload-certs --upload-certs | tail -n 1)" > /tmp/controlplane-join.sh; kubeadm token create --print-join-command > /tmp/worker-join.sh+###KUBEADM_MODE###+g' butane-kubeadm.yaml 
     elif [[ "$K8S_MODE" == "controlplane"  ]]; then
-        sed -i 's+scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@###FLOATINGIP###:/tmp/controlplane-join.sh /tmp/controlplane-join.sh ;echo "$(cat /tmp/controlplane-join.sh) -v=5" | sudo bash; systemctl enable --now keepalived+###KUBEADM_MODE###+g' butane-kubeadm.yaml 
+        sed -i 's+scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@###FLOATINGIP###:/tmp/controlplane-join.sh /tmp/controlplane-join.sh ;echo "$(cat /tmp/controlplane-join.sh) -v=5" | sudo PATH=/usr/local/bin bash; systemctl enable --now keepalived+###KUBEADM_MODE###+g' butane-kubeadm.yaml 
     else
-        sed -i 's+scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@###FLOATINGIP###:/tmp/worker-join.sh; echo "$(cat /tmp/controlplane-join.sh) -v=5" | sudo bash+###KUBEADM_MODE###+g' butane-kubeadm.yaml 
+        sed -i 's+scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@###FLOATINGIP###:/tmp/worker-join.sh; echo "$(cat /tmp/controlplane-join.sh) -v=5" | sudo PATH=/usr/local/bin bash+###KUBEADM_MODE###+g' butane-kubeadm.yaml 
     fi
 
     virt-install \

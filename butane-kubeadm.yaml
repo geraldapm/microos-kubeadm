@@ -46,7 +46,6 @@ systemd:
         [Service]
         Type=oneshot
         TimeoutStartSec=2400
-        Environment=PATH=/sbin:/usr/sbin:/usr/local/sbin:/root/bin:/usr/local/bin:/usr/bin:/bin
         ExecStart=/bin/sh -c ' \
           /usr/local/bin/kubeadm version; \
           ###KUBEADM_MODE### ;\
