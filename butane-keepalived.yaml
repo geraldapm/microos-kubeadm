@@ -33,7 +33,7 @@ storage:
 systemd:
   units:
     - name: keepalived.service
-      enabled: false
+      enabled: true
       contents: |
         [Unit]
         Description=Keepalive Daemon (VRRP and LVS)
@@ -47,7 +47,7 @@ systemd:
               while [ ! -e /usr/sbin/keepalived ]; do \
                 echo "Waiting for /usr/sbin/keepalived to exists..."; \
                 sleep 5; \
-              done'
+              done;'
         ExecStart=/usr/sbin/keepalived -f /etc/keepalived/keepalived.conf -D
         ExecReload=/bin/kill -HUP $MAINPID
         Restart=always

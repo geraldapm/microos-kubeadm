@@ -101,6 +101,9 @@ EOF
         # Wait 5 seconds before checking again to save CPU cycles
         sleep 30
     done
+    ssh root@${IP_ADDR} sudo sed -i '/^GRUB_CMDLINE_LINUX=/ s/"$/ ignition.firstboot=1"/' /etc/default/grub
+    ssh root@${IP_ADDR} sudo transactional-update grub.cfg
+    ssh root@${IP_ADDR} sudo poweroff
 
 ### After all done, please add ignition.firstboot=1 to reinit ignition for each nodes
 # sudo sed -i '/^GRUB_CMDLINE_LINUX=/ s/"$/ ignition.firstboot=1"/' /etc/default/grub
