@@ -20,7 +20,7 @@ systemd:
         Environment=POD_CIDR=###POD_CIDR###
         Environment=PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/var/opt/bin"
         Environment=API_SERVER_IP=###FLOATINGIP###
-        Environment=API_SERVER_PORT=6443
+        Environment=API_SERVER_PORT=6444
         Environment=HOME=/root
         Environment=CLI_ARCH=amd64
         ExecStart=/bin/sh -c ' \
