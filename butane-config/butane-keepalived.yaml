@@ -1,0 +1,56 @@
+variant: fcos
+version: 1.5.0
+storage:
+  files:
+    - path: /etc/keepalived/keepalived.conf
+      overwrite: true
+      mode: 0644
+      contents:
+        inline: |
+          vrrp_script chk_kube_apiserver {
+              script "curl -s --insecure https://localhost:6443/healthz || exit 1"
+              interval 2
+              weight -20
+          }
+          vrrp_instance VI_1 {
+              state MASTER
+              interface enp1s0
+
+              virtual_router_id 51
+              priority ###KEEPALIVED_PRIORITY###
+              advert_int 1
+              authentication {
+                  auth_type PASS
+                  auth_pass keepalivedpassword
+              }
+              virtual_ipaddress {
+                  ###FLOATINGIP###
+              }
+              track_script {
+                  chk_kube_apiserver
+              }
+          }
+    - path: /etc/containers/systemd/keepalived.container
+      contents:
+        inline: |
+          [Unit]
+          Description=Keepalived Container
+          After=network-online.target
+          Wants=network-online.target
+
+          [Container]
+          Image=docker.io/osixia/keepalived:latest
+          AutoUpdate=registry
+          AddCapability=NET_ADMIN
+          AddCapability=NET_BROADCAST
+          AddCapability=NET_RAW
+          PodmanArgs=--privileged
+          Volume=/etc/keepalived/keepalived.conf:/etc/keepalived/keepalived.conf:ro
+          Network=host
+
+          [Service]
+          Restart=always
+          RestartSec=30
+
+          [Install]
+          WantedBy=multi-user.target default.target

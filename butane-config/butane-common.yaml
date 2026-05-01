@@ -8,9 +8,15 @@ passwd:
       ### Generate ssh key-pairs with "ssh-keygen -t rsa"
       ### Copy from ~/.ssh/id_rsa.pub
       ssh_authorized_keys:
-        - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDJxa1BHvefVDIIMPP8JuSqe0k3WjlqFqfLO5eJoeH+8w5RFZnbzRA+x6hC5fUXbrIfEsZ7BrC4ieSXwidfFeImTI8VKY2EFpUsgd/FUFsUbQbdMKUuxGmZodU11kWobUnc0vksrGqXKgr8gbZEk8LbizQvUiFXVEP7miDbH5OrDwmar+Pvp1R+ONNB3Y+CLV4++K7J4nGJIIIoxVVt9XPx4iI8qMAotqJo6QiddRO/dV9RLrJdUiR0yQvTgMBaKqW23p+T+bAHsCmOOWqVFbfc5ovz6jWTa/JYLigIm1Ph7IxMFyqkySGgdTvcjNu5K87sqjmNAVstvQkXicMxg1prUSBd1MGknQRYnGmpFxfS0H0AJVmw36hJ3vlXFTChEwPhYRq0kSCEsOIL+cfU+6Zl1Ju1jmc7o6utWu12Jv/blMqqoMe+oNMA73dpejLzWoRHixcmFbM9ZOhflQYBCDHk17jUbtjUuUrQ4x6Om+sprt5++C6KsvvUSpllScAfVJ8= gerald@gpm-laptop
+        - ssh-rsa
+          AAAAB3NzaC1yc2EAAAADAQABAAABgQDJxa1BHvefVDIIMPP8JuSqe0k3WjlqFqfLO5eJoeH+8w5RFZnbzRA+x6hC5fUXbrIfEsZ7BrC4ieSXwidfFeImTI8VKY2EFpUsgd/FUFsUbQbdMKUuxGmZodU11kWobUnc0vksrGqXKgr8gbZEk8LbizQvUiFXVEP7miDbH5OrDwmar+Pvp1R+ONNB3Y+CLV4++K7J4nGJIIIoxVVt9XPx4iI8qMAotqJo6QiddRO/dV9RLrJdUiR0yQvTgMBaKqW23p+T+bAHsCmOOWqVFbfc5ovz6jWTa/JYLigIm1Ph7IxMFyqkySGgdTvcjNu5K87sqjmNAVstvQkXicMxg1prUSBd1MGknQRYnGmpFxfS0H0AJVmw36hJ3vlXFTChEwPhYRq0kSCEsOIL+cfU+6Zl1Ju1jmc7o6utWu12Jv/blMqqoMe+oNMA73dpejLzWoRHixcmFbM9ZOhflQYBCDHk17jUbtjUuUrQ4x6Om+sprt5++C6KsvvUSpllScAfVJ8=
+          gerald@gpm-laptop
 storage:
   files:
+    - path: /etc/profile.d/opt-path.sh
+      contents:
+        inline: |
+          export PATH=$PATH:/var/opt/bin
     ### Initial Node IP
     - path: /etc/hostname
       overwrite: true
@@ -18,8 +24,8 @@ storage:
       contents:
         inline: |-
           ###HOSTNAME###
+    ### The default interface naming is enp1s0
     - path: /etc/NetworkManager/system-connections/enp1s0.nmconnection
-      overwrite: true
       mode: 0600
       contents:
         inline: |
@@ -29,7 +35,7 @@ storage:
           interface-name=enp1s0
           [ipv4]
           address1=###IP_ADDRESS###/###CIDR###,###IP_GATEWAY###
-          dns=8.8.8.8;8.8.4.4;
+          dns=###IP_GATEWAY###
           method=manual
           [ipv6]
           method=auto

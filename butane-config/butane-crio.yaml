@@ -1,0 +1,72 @@
+variant: fcos
+version: 1.5.0
+storage:
+  files:
+    - path: /etc/crio/crio.conf.d/02-cgroup-manager.conf
+      mode: 0644
+      contents:
+        inline: |
+          [crio.runtime]
+          conmon_cgroup = "pod"
+          cgroup_manager = "cgroupfs"
+    - path: /etc/crio/crio.conf.d/02-pod-management.conf
+      mode: 0644
+      contents:
+        inline: |
+          [crio.runtime]
+          default_runtime = "runc"
+
+          [crio.image]
+          pause_image="registry.k8s.io/pause:3.10"
+
+          [crio.network]
+          network_dir = "/etc/cni/net.d/"
+          plugin_dir = "/var/opt/cni/bin"
+systemd:
+  units:
+    - name: ipvs-setup.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Load ip_vs kernel modules
+        After=local-fs-pre.target
+        Wants=local-fs-pre.target
+
+        [Service]
+        Type=oneshot
+        ExecStart=/usr/bin/modprobe ip_vs
+        RemainAfterExit=true
+
+        [Install]
+        WantedBy=multi-user.target
+    - name: install-crio.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=cri-o CRI Installer
+        After=network-online.target
+        Wants=network-online.target
+        ConditionPathExists=!/var/opt/bin/crio
+
+        [Service]
+        Type=oneshot
+        TimeoutStartSec=1200
+        Environment=LIBEXECDIR=/var/opt/libexec
+        Environment=PREFIX=/var/opt
+        Environment=CRIO_VERSION=###CRIO_VERSION###
+        ExecStart=/bin/sh -c ' \
+          curl https://storage.googleapis.com/cri-o/artifacts/cri-o.amd64.${CRIO_VERSION}.tar.gz | tar -C /var/tmp -xz; \
+          cd /var/tmp/cri-o; \
+          bash install; \
+          systemctl enable --now crio.service; \
+          rm -rf /var/tmp/cri-o*; \
+          cp ${PREFIX}/lib/systemd/system/crio.service /etc/systemd/system/crio.service; \
+          sed -i "s;/usr/local/bin/crio;${PREFIX}/bin/crio;g" /etc/systemd/system/crio.service; \
+          echo 'PATH=$PATH:/var/opt/bin' >> /etc/sysconfig/crio ; \
+          systemctl daemon-reload; \
+          systemctl enable --now crio.service; \
+          '
+        RemainAfterExit=true
+
+        [Install]
+        WantedBy=multi-user.target

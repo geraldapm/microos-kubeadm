@@ -1,0 +1,42 @@
+variant: fcos
+version: 1.5.0
+systemd:
+  units:
+    - name: install-cilium.service
+      enabled: true
+      contents: |-
+        [Unit]
+        Description=Cilium CNI Installer
+        After=network-online.target syslog.target setup-kubeadm.service
+        Wants=network-online.target setup-kubeadm.service
+        Requires=setup-kubeadm.service
+
+        [Service]
+        Type=oneshot
+        TimeoutStartSec=2400
+        Environment=KUBECONFIG='/etc/kubernetes/admin.conf'
+        Environment=CILIUM_VERSION=###CILIUM_VERSION###
+        Environment=CILIUM_CLI_VERSION=###CILIUM_CLI_VERSION###
+        Environment=POD_CIDR=###POD_CIDR###
+        Environment=PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/var/opt/bin"
+        Environment=API_SERVER_IP=###FLOATINGIP###
+        Environment=API_SERVER_PORT=6443
+        Environment=HOME=/root
+        Environment=CLI_ARCH=amd64
+        ExecStart=/bin/sh -c ' \
+          if [ "$(uname -m)" = "aarch64" ]; then CLI_ARCH=arm64; fi; \
+          cd /tmp; curl -L --fail --remote-name-all https://github.com/cilium/cilium-cli/releases/download/${CILIUM_CLI_VERSION}/cilium-linux-${CLI_ARCH}.tar.gz{,.sha256sum}; \
+          if [ "$(uname -m)" = "aarch64" ]; then CLI_ARCH=arm64; fi; \
+          curl -L --fail --remote-name-all https://github.com/cilium/cilium-cli/releases/download/${CILIUM_CLI_VERSION}/cilium-linux-${CLI_ARCH}.tar.gz{,.sha256sum} -o /tmp/; \
+          sha256sum --check /tmp/cilium-linux-${CLI_ARCH}.tar.gz.sha256sum; \
+          sudo tar xzvfC /tmp/cilium-linux-${CLI_ARCH}.tar.gz /var/opt/bin/; \
+          rm /tmp/cilium-linux-${CLI_ARCH}.tar.gz{,.sha256sum}; \
+          /var/opt/bin/cilium install --version ${CILIUM_VERSION} \
+              --set kubeProxyReplacement=true \
+              --set k8sServiceHost=${API_SERVER_IP} \
+              --set k8sServicePort=${API_SERVER_PORT} \
+              --set ipam.operator.clusterPoolIPv4PodCIDRList="${POD_CIDR}";'
+        RemainAfterExit=true
+
+        [Install]
+        WantedBy=multi-user.target

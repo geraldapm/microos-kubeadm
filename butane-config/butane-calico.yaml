@@ -1,0 +1,33 @@
+variant: fcos
+version: 1.5.0
+systemd:
+  units:
+    - name: install-calico.service
+      enabled: true
+      contents: |-
+        [Unit]
+        Description=Calico CNI Installer
+        After=network-online.target syslog.target setup-kubeadm.service
+        Wants=network-online.target setup-kubeadm.service
+        Requires=setup-kubeadm.service
+
+        [Service]
+        Type=oneshot
+        TimeoutStartSec=2400
+        Environment=KUBECONFIG='/etc/kubernetes/admin.conf'
+        Environment=CALICO_VERSION=###CALICO_VERSION###
+        Environment=POD_CIDR=###POD_CIDR###
+        Environment=PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/var/opt/bin"
+        ExecStart=/bin/sh -c ' \
+          kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/${CALICO_VERSION}/manifests/operator-crds.yaml; \
+          kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/${CALICO_VERSION}/manifests/tigera-operator.yaml; \
+          curl https://raw.githubusercontent.com/projectcalico/calico/###CALICO_VERSION###/manifests/custom-resources-bpf.yaml -o /tmp/custom-resources.yaml; \
+          sed -i "s|cidr: 192.168.0.0/16|cidr: ${POD_CIDR}|g" /tmp/custom-resources.yaml; \
+          kubectl create -f /tmp/custom-resources.yaml; \
+          kubectl patch installation.operator/default --type='merge' -p '{"spec":{"flexVolumePath":"/usr/local/libexec/kubernetes/kubelet-plugins/volume/exec/"}}'; \
+          curl -L https://github.com/projectcalico/calico/releases/download/${CALICO_VERSION}/calicoctl-linux-amd64 -o /var/opt/bin/calicoctl; chmod +x /var/opt/bin/calicoctl \
+          '
+        RemainAfterExit=true
+
+        [Install]
+        WantedBy=multi-user.target

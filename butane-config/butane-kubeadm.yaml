@@ -1,0 +1,90 @@
+variant: fcos
+version: 1.5.0
+storage:
+  files:
+    - path: /etc/modules-load.d/k8s.conf
+      mode: 0644
+      contents:
+        inline: |
+          overlay
+          br_netfilter
+          nf_conntrack
+    - path: /etc/sysctl.d/k8s.conf
+      mode: 0644
+      contents:
+        inline: |
+          net.bridge.bridge-nf-call-iptables  = 1
+          net.bridge.bridge-nf-call-ip6tables = 1
+          net.ipv4.ip_forward                 = 1
+          net.netfilter.nf_conntrack_max      = 131072
+systemd:
+  units:
+    - name: install-kubeadm.service
+      enabled: true
+      contents: |-
+        [Unit]
+        Description=kubeadm Installer
+        After=network-online.target syslog.target
+        Wants=network-online.target
+        ConditionPathExists=!/var/opt/bin/kubeadm
+
+        [Service]
+        Type=oneshot
+        TimeoutStartSec=2400
+        Environment=KUBERNETES_VERSION=###K8S_VERSION###
+        EnvironmentFile=/etc/kubernetes/certs.conf
+        ExecStart=/bin/sh -c ' \
+          mkdir -p /var/opt/bin /etc/systemd/system/kubelet.service.d /etc/kubernetes/patches; \
+          cd /var/opt/bin/; curl -L --remote-name-all "https://dl.k8s.io/release/${KUBERNETES_VERSION}/bin/linux/amd64/{kubeadm,kubelet,kubectl}"; sudo chmod +x /var/opt/bin/{kubeadm,kubelet,kubectl}; \
+          curl -sSL "https://raw.githubusercontent.com/kubernetes/release/v0.16.2/cmd/krel/templates/latest/kubelet/kubelet.service" | sed "s:/usr/bin:/var/opt/bin:g" | sudo tee /etc/systemd/system/kubelet.service; \
+          curl -sSL "https://raw.githubusercontent.com/kubernetes/release/v0.16.2/cmd/krel/templates/latest/kubeadm/10-kubeadm.conf" | sed "s:/usr/bin:/var/opt/bin:g; \
+            s+KUBELET_CONFIG_ARGS=--config=/var/lib/kubelet/config.yaml+KUBELET_CONFIG_ARGS=--config=/var/lib/kubelet/config.yaml --volume-plugin-dir=/var/opt/libexec/kubernetes/kubelet-plugins/volume/exec+g" | sudo tee /etc/systemd/system/kubelet.service.d/10-kubeadm.conf; \
+          systemctl daemon-reload; systemctl enable --now kubelet; \
+          sysctl -p /etc/sysctl.d/k8s.conf; \
+          modprobe overlay; \
+          modprobe br_netfilter; \
+          modprobe nf_conntrack; \
+          '
+        ExecStartPost=/bin/sh -c ' \
+          /var/opt/bin/kubeadm version; \
+          /var/opt/bin/kubelet --version;'
+        RemainAfterExit=true
+
+        [Install]
+        WantedBy=multi-user.target
+
+    - name: setup-kubeadm.service
+      enabled: true
+      contents: |-
+        [Unit]
+        Description=Kubeadm join setup
+        After=install-kubeadm.service network-online.target syslog.target
+        Wants=install-kubeadm.service network-online.target
+        Requires=install-kubeadm.service 
+        ConditionPathExists=!/var/lib/kubelet/config.yaml
+
+        [Service]
+        Type=oneshot
+        TimeoutStartSec=2400
+        Environment=APISERVER_HEALTHCHECK="https://###FLOATINGIP###:6444/healthz"
+        Environment=APISERVER_ENDPOINT="###FLOATINGIP###:6444"
+        Environment=FIRSTNODE_IP="###FIRSTNODE_IP###"
+        Environment=PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/var/opt/bin"
+        EnvironmentFile=/etc/kubernetes/certs.conf
+        ExecStartPre=/bin/sh -c '###KUBEADM_PRESTART###'
+        ExecStartPre=/bin/bash -c 'while true; do \
+            if curl -k -s "$APISERVER_HEALTHCHECK" > /dev/null; then \
+                echo "Exiting loop: Kubernetes API Server is reachable."; sleep 30s; break; \
+            elif ip addr | grep -q "$FIRSTNODE_IP"; then \
+                echo "Exiting loop: Initializing the first Kubernetes Control-plane Node..."; break; \
+            else \
+                echo "Retrying to reach Kubernetes API Server..."; sleep 5; \
+            fi; \
+          done'
+        ExecStart=/bin/sh -c ' \
+          /var/opt/bin/kubeadm version; \
+          ###KUBEADM_MODE### ;'
+        RemainAfterExit=true
+        ExecStartPost=/bin/sh -c 'transactional-update apply'
+        [Install]
+        WantedBy=multi-user.target

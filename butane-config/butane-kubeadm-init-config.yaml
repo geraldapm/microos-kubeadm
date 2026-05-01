@@ -1,0 +1,38 @@
+variant: fcos
+version: 1.5.0
+storage:
+  files:
+    - path: /etc/kubernetes/kubeadm-config.yaml
+      mode: 0644
+      overwrite: true
+      contents:
+        inline: |
+          ---
+          apiVersion: kubeadm.k8s.io/v1beta4
+          kind: InitConfiguration
+          bootstrapTokens:
+            - token: ###K8S_TOKEN###
+          nodeRegistration:
+            criSocket: unix:///var/run/crio/crio.sock
+            kubeletExtraArgs:
+            - name: volume-plugin-dir
+              value: "/var/opt/libexec/kubernetes/kubelet-plugins/volume/exec/"
+          patches:
+            directory: /etc/kubernetes/patches
+          ---
+          apiVersion: kubeadm.k8s.io/v1beta4
+          kind: ClusterConfiguration
+          controlPlaneEndpoint: "###FLOATINGIP###:6444"
+          controllerManager:
+            extraArgs:
+            - name: flex-volume-plugin-dir
+              value: "/var/opt/libexec/kubernetes/kubelet-plugins/volume/exec/"
+          networking:
+            podSubnet: "###POD_CIDR###"
+            serviceSubnet: "###SERVICE_CIDR###"
+          apiServer:
+            certSANs:
+              - "###FLOATINGIP###"
+            extraArgs:
+            - name:  service-node-port-range
+              value: "30000-32767"

@@ -1,4 +1,26 @@
-*.qcow2
-*.ign
 butane
 butane-ssh.yaml
+
+# Any generated certs directory
+certs/
+rootca/
+*.crt
+*.key
+*.csr
+
+# butane binary executable
+butane
+
+# Any generated butane config. the butane-generated folder should be saved in different repository
+butane-autogen/
+butane-generated/
+
+# Any downloaded .tar.gz file
+*.tar.gz
+
+# Any image templte disk file
+images/
+
+# Any generated ignition config file
+ignition/
+*.ign

@@ -1,126 +1,75 @@
-# K3s MicroOS provisioning with Ignition way
+# Kubeadm MicroOS provisioning with Ignition way
 
-This repository contains the quick way to deploy a K3s basic HA cluster with OpenSUSE MicroOS. It is intended to be recycleable and minimizing the requirement to intervene manually during K3s installation. Just sit down, grab some drinks, and enjoy the process. Easily creatable and destroyable K3s cluster.
+This repository contains the quick way to deploy a Kubeadm basic HA cluster with OpenSUSE MicroOS. It is intended to be recycleable and minimizing the requirement to intervene manually during Kubeadm installation. Just sit down, grab some drinks, and enjoy the process. Easily creatable and destroyable Kubeadm cluster.
 
 ## Prerequisites
 
 - An Installed Linux System with KVM capabilities
-- MicroOS cloud image with qcow2 format. Download it from there -> https://get.opensuse.org/microos. NOTE: Do not use container host image because it contains podman and K3s does not using podman as its CNI (make it simple and clean).
-- Butane binary executable to convert butane definition into ignition file. Download it from there -> https://github.com/coreos/butane/releases
-
-## Preparing
-
-- Copy butane-ssh.yaml.example to butane-ssh.yaml and edit its contents
+- MicroOS cloud image with qcow2 format. Download it from there -> https://get.opensuse.org/microos. NOTE: Usese container host image because it contains podman and it will be used as runtime for keepalived and haproxy for virtual IP HA mode.
+- Butane binary executable to convert butane definition into ignition file. Download it from there -> https://github.com/coreos/butane/releases and install with this command
 
 ```bash
-    ### Enable inter-node ssh to copy kubeadm join token
-    - path: /root/.ssh/id_rsa
-      mode: 0600
-      overwrite: true
-      contents:
-        inline: |-
-          -----BEGIN OPENSSH PRIVATE KEY-----
-          abcdefg.....
+wget -c https://github.com/coreos/butane/releases/download/v0.25.1/butane-x86_64-unknown-linux-gnu -O butane
+chmod +x butane
 ```
 
-- Start the template VMs
+- Allocatable IP Addresses for each vms
+- FAST Internet connection for downloading required binaries
 
-```bash
-bash template-microos.sh
-```
+## Environments
 
-- After all installation sequence completed, Reinitialize the ignition config
-
-```bash
-sudo sed -i '/^GRUB_CMDLINE_LINUX=/ s/"$/ ignition.firstboot=1"/' /etc/default/grub
-sudo transactional-update grub.cfg
-```
-
-- Power Off the VM. It is now ready to serve as template VM for our Kubernees Nodes
-
-## Installing
-
-- Copy the downloaded qcow2 file to working directory.
-- Copy the downloaded butane binary executable into working directory
-- Edit the following env from scripts [./start-microos.sh](./start-microos.sh)
-
-```bash
-# Change the hostname and node count. Note that the provisioning will be sequential.
-vms=(
-    "gpmcontrolplane1"
-    "gpmcontrolplane2"
-    "gpmcontrolplane3"
-    "gpmworker1"
-    "gpmworker2"
-)
-
-# MicroOS cloud image file path
-TEMPLATE_DISK_FILE="$CURRENT_DIR/opensuse-microos.qcow2"
-
-# Modify CPU, Memory, and network interface. It is homogenous for all node. Change depending on needs.
-VCPU=2
-MEMORY_MB=2048
-NETWORK_IFACE=virbr0
-
-# Default POD CIDR & Service CIDR
-POD_CIDR=10.244.0.0/16
-SERVICE_CIDR=10.96.0.0/12
-
-# Default IP Network Range from KVM
-IP_SUBNET=192.168.122.0/24
-IP_RANGE_START=100
-IP_RANGE_CONTROLPLANE1=101
+3 Control Plane Nodes and 2 Worker Nodes installed with Flatcar Linux and Kubernetes v1.35 cluster with Calico CNI v3.31.5. The spec is 2 vCPU, 2GB Memory and 20GB Stoage (in rootfs). It also has the Floating IP for kubernetes api server reachability and enabling High-Availability
 
 ```
+floatingip 192.168.122.100
 
-- Edit the following env from scripts [./stop-microos.sh](./stop-microos.sh)
-
-```bash
-### Change the hostname and node count
-vms=(
-    "gpmcontrolplane1"
-    "gpmcontrolplane2"
-    "gpmcontrolplane3"
-    "gpmworker1"
-    "gpmworker2"
-)
+gpmcontrolplane1 192.168.122.101
+gpmcontrolplane2 192.168.122.102
+gpmcontrolplane3 192.168.122.103
+gpmworker1 192.168.122.104
+gpmworker2 192.168.122.105
 ```
 
-- Start the VMs
+## Pre-provisioning
 
-```bash
-bash start-microos.sh
+1. Ensure that the latest image is downloaded and inside into the Linux Hypervisor.
+
+2. Generate ignition scripts and other resources with this command:
+
+```shell
+bash generate-ignition.sh --generate-cert
 ```
 
-- Wait for about 10 minutes to ensure that the cluster is fully provisioned.
-- Verify installation (default root password is "12345")
+3. When needed, you can delete all ignition scripts and other resources with this command:
 
-```bash
-ssh root@<controlplanenode> k3s kubectl get node
+```shell
+bash reset-ignition.sh --destroy
 ```
 
-- Use with your needs, feel free to play with the K8s kubeadm Cluster.
+## Provisioning
+
+Provision the VMs with this command:
+
+```shell
+bash start-vm.sh --provision
+```
+
+When needed, you can stop the VM with this command:
+
+```shell
+bash stop-vm.sh
+```
+
+and starting it once again with this command:
+
+```shell
+bash start-vm.sh
+```
 
 ## Cleanup
 
-Poweroff the VMs
+If you need to stop the VMs and deleting all provisioned VMs, use this command
 
-```bash
-bash stop-microos.sh
-```
-
-Poweroff and cleanup all the VMs data
-
-```bash
-bash stop-microos.sh --destroy
-```
-
-TODO: Automate kubeadm provisioning
-
-- manual provisioning
-  First controlplane
-
-```bash
-kubeadm init --control-plane-endpoint=192.168.122.99 --apiserver-advertise-address=192.168.122.101 --apiserver-cert-extra-sans=192.168.122.101,192.168.122.99 --pod-network-cidr=10.244.0.0/16 --service-cidr=10.96.0.0/12 --node-name "${HOSTNAME}" --ignore-preflight-errors Swap
-
+```shell
+bash stop-vm.sh --destroy
 ```
