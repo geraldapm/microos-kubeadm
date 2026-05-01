@@ -9,6 +9,25 @@ storage:
           [crio.runtime]
           conmon_cgroup = "pod"
           cgroup_manager = "cgroupfs"
+    - path: /etc/crio/crio.conf.d/02-default-capabilities.conf
+      mode: 0644
+      contents:
+        inline: |
+          [crio.runtime]
+          default_capabilities = [
+          "MKNOD",
+          "CHOWN", 
+          "DAC_OVERRIDE", 
+          "FSETID", 
+          "FOWNER", 
+          "NET_RAW", 
+          "SETGID", 
+          "SETUID", 
+          "SETPCAP", 
+          "NET_BIND_SERVICE", 
+          "SYS_CHROOT", 
+          "KILL", 
+          ]
     - path: /etc/crio/crio.conf.d/02-pod-management.conf
       mode: 0644
       contents:
