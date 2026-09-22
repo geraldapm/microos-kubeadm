@@ -11,13 +11,13 @@ vms=($(echo "$hostlist" | awk '{print $2}'))
 CURRENT_DIR=$(pwd)
 
 IMAGE_DIR=$CURRENT_DIR/images
-TEMPLATE_DISK_FILE="$IMAGE_DIR/openSUSE-MicroOS.x86_64-ContainerHost-kvm-and-xen.qcow2"
+TEMPLATE_DISK_FILE="$IMAGE_DIR/openSUSE-Leap-Micro.x86_64-Default-qcow.qcow2"
 IGNITION_DIR=$CURRENT_DIR/ignition
 
 ### VM Specs
 VCPU=2
 MEMORY_MB=2048
-NETWORK_IFACE=virbr0
+NETWORK_IFACE=virbr4
 
 
 for vm in ${vms[*]}; do 
@@ -28,7 +28,9 @@ for vm in ${vms[*]}; do
 
 if [[ $1 == "--provision" ]];
 then
-    qemu-img create -f qcow2 -F qcow2 -b $TEMPLATE_DISK_FILE $IMAGE_DIR/$vm.qcow2 20G
+    cp -f $TEMPLATE_DISK_FILE $IMAGE_DIR/$vm.qcow2
+    qemu-img resize $IMAGE_DIR/$vm.qcow2 +20G
+    #qemu-img create -f qcow2 -F qcow2 -b $TEMPLATE_DISK_FILE $IMAGE_DIR/$vm.qcow2 20G
 
     virt-install \
     --name=$vm \

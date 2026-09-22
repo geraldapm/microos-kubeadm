@@ -14,7 +14,7 @@ storage:
           }
           vrrp_instance VI_1 {
               state MASTER
-              interface enp1s0
+              interface eth0
 
               virtual_router_id 51
               priority ###KEEPALIVED_PRIORITY###

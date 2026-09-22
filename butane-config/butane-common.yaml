@@ -2,15 +2,13 @@ variant: fcos
 version: 1.5.0
 passwd:
   users:
+      ### Generate password -> openssl passwd -6 -salt "12345"
     - name: root
-      ### Generate password -> openssl passwd -6 -salt "test"
       password_hash: $6$test$rqVNhXeFVHA3yzsfap9jTZMTkLuPQpsQMF2HWUfpcXYKyP9IPgte4frtqcgvNChjljNZVI1ygiG/q8xGUKJWp0
-      ### Generate ssh key-pairs with "ssh-keygen -t rsa"
-      ### Copy from ~/.ssh/id_rsa.pub
-      ssh_authorized_keys:
-        - ssh-rsa
-          AAAAB3NzaC1yc2EAAAADAQABAAABgQDJxa1BHvefVDIIMPP8JuSqe0k3WjlqFqfLO5eJoeH+8w5RFZnbzRA+x6hC5fUXbrIfEsZ7BrC4ieSXwidfFeImTI8VKY2EFpUsgd/FUFsUbQbdMKUuxGmZodU11kWobUnc0vksrGqXKgr8gbZEk8LbizQvUiFXVEP7miDbH5OrDwmar+Pvp1R+ONNB3Y+CLV4++K7J4nGJIIIoxVVt9XPx4iI8qMAotqJo6QiddRO/dV9RLrJdUiR0yQvTgMBaKqW23p+T+bAHsCmOOWqVFbfc5ovz6jWTa/JYLigIm1Ph7IxMFyqkySGgdTvcjNu5K87sqjmNAVstvQkXicMxg1prUSBd1MGknQRYnGmpFxfS0H0AJVmw36hJ3vlXFTChEwPhYRq0kSCEsOIL+cfU+6Zl1Ju1jmc7o6utWu12Jv/blMqqoMe+oNMA73dpejLzWoRHixcmFbM9ZOhflQYBCDHk17jUbtjUuUrQ4x6Om+sprt5++C6KsvvUSpllScAfVJ8=
-          gerald@gpm-laptop
+    - name: gerald
+      password_hash: $6$test$rqVNhXeFVHA3yzsfap9jTZMTkLuPQpsQMF2HWUfpcXYKyP9IPgte4frtqcgvNChjljNZVI1ygiG/q8xGUKJWp0
+      home_dir: /var/home/gerald
+      no_create_home: false
 storage:
   files:
     - path: /etc/profile.d/opt-path.sh
@@ -24,15 +22,15 @@ storage:
       contents:
         inline: |-
           ###HOSTNAME###
-    ### The default interface naming is enp1s0
-    - path: /etc/NetworkManager/system-connections/enp1s0.nmconnection
+    ### The default interface naming is eth0
+    - path: /etc/NetworkManager/system-connections/eth0.nmconnection
       mode: 0600
       contents:
         inline: |
           [connection]
-          id=enp1s0
+          id=eth0
           type=ethernet
-          interface-name=enp1s0
+          interface-name=eth0
           [ipv4]
           address1=###IP_ADDRESS###/###CIDR###,###IP_GATEWAY###
           dns=###IP_GATEWAY###

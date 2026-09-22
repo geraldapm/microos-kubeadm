@@ -8,7 +8,7 @@ source hostlist.sh
 vms=($(echo "$hostlist" | awk '{print $2}'))
 
 ### Define the first controlplane IP to init the kubeadm cluster
-IP_RANGE_CONTROLPLANE1=192.168.122.101
+IP_RANGE_CONTROLPLANE1="$(echo $IP_SUBNET | cut -d. -f1-3).101"
 
 ### Define the default directory gen
 CURRENT_DIR=$(pwd)
@@ -23,11 +23,12 @@ POD_CIDR=10.244.0.0/16
 SERVICE_CIDR=10.96.0.0/12
 
 ### Versioning used in the provisioning scripts
-K8S_VERSION="v1.35.4"
-CRIO_VERSION="v1.35.2"
+K8S_VERSION="v1.37.0"
+CRIO_VERSION="v1.37.0"
 CALICO_VERSION="v3.31.5"
-CILIUM_VERSION="1.19.3"
-CILIUM_CLI_VERSION=$(curl -s https://raw.githubusercontent.com/cilium/cilium-cli/main/stable.txt)
+CILIUM_VERSION="1.20.2"
+CILIUM_CLI_VERSION="v0.20.0"
+#CILIUM_CLI_VERSION=$(curl -s https://raw.githubusercontent.com/cilium/cilium-cli/main/stable.txt)
 
 if [[ $1 == "--generate-cert" ]];
 then
@@ -134,8 +135,10 @@ for vm in ${vms[*]}; do
                         | sed "s+###IP_ADDRESS###+$IP_ADDR+g" \
                         | butane)
                 - inline: |-
-                    $(cat $BUTANE_STATIC_DIR/butane-calico.yaml \
-                        | sed "s+###CALICO_VERSION###+$CALICO_VERSION+g" \
+                    $(cat $BUTANE_STATIC_DIR/butane-cilium.yaml \
+                        | sed "s+###CILIUM_CLI_VERSION###+$CILIUM_CLI_VERSION+g" \
+                        | sed "s+###CILIUM_VERSION###+$CILIUM_VERSION+g" \
+                        | sed "s+###FLOATINGIP###+$IP_FLOATING+g" \
                         | sed "s+###POD_CIDR###+$POD_CIDR+g" \
                         | butane)
 EOF
