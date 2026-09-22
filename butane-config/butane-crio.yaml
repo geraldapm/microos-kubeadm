@@ -74,7 +74,7 @@ systemd:
         Environment=PREFIX=/var/opt
         Environment=CRIO_VERSION=###CRIO_VERSION###
         ExecStart=/bin/sh -c ' \
-          curl https://storage.googleapis.com/cri-o/artifacts/cri-o.amd64.${CRIO_VERSION}.tar.gz | tar -C /var/tmp -xz; \
+          curl ###CRIO_INSTALLER_URL### | tar -C /var/tmp -xz; \
           cd /var/tmp/cri-o; \
           bash install; \
           systemctl enable --now crio.service; \

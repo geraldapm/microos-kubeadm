@@ -35,9 +35,9 @@ systemd:
         EnvironmentFile=/etc/kubernetes/certs.conf
         ExecStart=/bin/sh -c ' \
           mkdir -p /var/opt/bin /etc/systemd/system/kubelet.service.d /etc/kubernetes/patches; \
-          cd /var/opt/bin/; curl -L --remote-name-all "https://dl.k8s.io/release/${KUBERNETES_VERSION}/bin/linux/amd64/{kubeadm,kubelet,kubectl}"; sudo chmod +x /var/opt/bin/{kubeadm,kubelet,kubectl}; \
-          curl -sSL "https://raw.githubusercontent.com/kubernetes/release/v0.16.2/cmd/krel/templates/latest/kubelet/kubelet.service" | sed "s:/usr/bin:/var/opt/bin:g" | sudo tee /etc/systemd/system/kubelet.service; \
-          curl -sSL "https://raw.githubusercontent.com/kubernetes/release/v0.16.2/cmd/krel/templates/latest/kubeadm/10-kubeadm.conf" | sed "s:/usr/bin:/var/opt/bin:g; \
+          cd /var/opt/bin/; curl -L --remote-name-all "###KUBEADM_INSTALLER_URL###"; sudo chmod +x /var/opt/bin/{kubeadm,kubelet,kubectl}; \
+          curl -sSL "###KUBELET_SERVICE_INSTALLER_URL###" | sed "s:/usr/bin:/var/opt/bin:g" | sudo tee /etc/systemd/system/kubelet.service; \
+          curl -sSL "###KUBEADM_DROPIN_INSTALLER_URL###" | sed "s:/usr/bin:/var/opt/bin:g; \
             s+KUBELET_CONFIG_ARGS=--config=/var/lib/kubelet/config.yaml+KUBELET_CONFIG_ARGS=--config=/var/lib/kubelet/config.yaml --volume-plugin-dir=/var/opt/libexec/kubernetes/kubelet-plugins/volume/exec+g" | sudo tee /etc/systemd/system/kubelet.service.d/10-kubeadm.conf; \
           systemctl daemon-reload; systemctl enable --now kubelet; \
           sysctl -p /etc/sysctl.d/k8s.conf; \
@@ -48,6 +48,9 @@ systemd:
         ExecStartPost=/bin/sh -c ' \
           /var/opt/bin/kubeadm version; \
           /var/opt/bin/kubelet --version;'
+        ExecStartPost=/bin/sh -c ' \
+          semanage fcontext -at bin_t "/var/opt/bin(/.*)?"; restorecon -Rv /var/opt/bin \
+          '
         RemainAfterExit=true
 
         [Install]

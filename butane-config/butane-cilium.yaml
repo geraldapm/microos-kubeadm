@@ -18,6 +18,7 @@ systemd:
         Environment=CILIUM_VERSION=###CILIUM_VERSION###
         Environment=CILIUM_CLI_VERSION=###CILIUM_CLI_VERSION###
         Environment=POD_CIDR=###POD_CIDR###
+        Environment=HOST_CIDR=###HOST_CIDR###
         Environment=PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/var/opt/bin"
         Environment=API_SERVER_IP=###FLOATINGIP###
         Environment=API_SERVER_PORT=6444
@@ -35,7 +36,8 @@ systemd:
               --set kubeProxyReplacement=true \
               --set k8sServiceHost=${API_SERVER_IP} \
               --set k8sServicePort=${API_SERVER_PORT} \
-              --set ipam.operator.clusterPoolIPv4PodCIDRList="${POD_CIDR}";'
+              --set ipam.operator.clusterPoolIPv4PodCIDRList="${POD_CIDR}";\
+              --set nodePort.addresses="${HOST_CIDR}"'
         RemainAfterExit=true
 
         [Install]

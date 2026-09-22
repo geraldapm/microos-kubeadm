@@ -30,16 +30,29 @@ CILIUM_VERSION="1.20.2"
 CILIUM_CLI_VERSION="v0.20.0"
 #CILIUM_CLI_VERSION=$(curl -s https://raw.githubusercontent.com/cilium/cilium-cli/main/stable.txt)
 
+
+# CRIO_INSTALLER_URL='https://storage.googleapis.com/cri-o/artifacts/cri-o.amd64.${CRIO_VERSION}.tar.gz'
+# KUBEADM_INSTALLER_URL='https://dl.k8s.io/release/${KUBERNETES_VERSION}/bin/linux/amd64/{kubeadm,kubelet,kubectl}'
+# KUBELET_SERVICE_INSTALLER_URL='https://raw.githubusercontent.com/kubernetes/release/v0.16.2/cmd/krel/templates/latest/kubelet/kubelet.service'
+# KUBEADM_DROPIN_INSTALLER_URL='https://raw.githubusercontent.com/kubernetes/release/v0.16.2/cmd/krel/templates/latest/kubeadm/10-kubeadm.conf'
+
+CRIO_INSTALLER_URL='https://storage.googleapis.com/cri-o/artifacts/cri-o.amd64.${CRIO_VERSION}.tar.gz'
+KUBEADM_INSTALLER_URL='https://dl.k8s.io/release/${KUBERNETES_VERSION}/bin/linux/amd64/{kubeadm,kubelet,kubectl}'
+KUBELET_SERVICE_INSTALLER_URL='https://raw.githubusercontent.com/kubernetes/release/v0.16.2/cmd/krel/templates/latest/kubelet/kubelet.service'
+KUBEADM_DROPIN_INSTALLER_URL='https://raw.githubusercontent.com/kubernetes/release/v0.16.2/cmd/krel/templates/latest/kubeadm/10-kubeadm.conf'
+
 if [[ $1 == "--generate-cert" ]];
 then
 # create the generated butane directory
 mkdir -p $BUTANE_GENERATED_DIR $IGNITION_DIR
 
-### Generate kubernetes certs
-bash ./scripts/gencert.sh
-
-### Generate cert butane config
-bash ./scripts/cert-yaml-injection.sh
+if [ ! -f "certs/kubernetes-ca.crt" ]; then
+    echo "The kubernetes certs does not exists. Generating kubernetes certs..."
+    ### Generate kubernetes certs
+    bash ./scripts/gencert.sh
+    ### Generate cert butane config
+    bash ./scripts/cert-yaml-injection.sh
+fi
 
 ### Generate ssh butane config
 bash ./scripts/ssh-generator.sh
@@ -53,6 +66,8 @@ KUBEADM_PRESTART_COMMAND='/var/opt/bin/kubeadm config images pull'
 KUBEADM_INIT_COMMAND='/var/opt/bin/kubeadm init --upload-certs --config /etc/kubernetes/kubeadm-config.yaml'
 KUBEADM_CONTROLPLANE_JOIN_COMMAND='/var/opt/bin/kubeadm join ${APISERVER_ENDPOINT} --ignore-preflight-errors=FileAvailable--etc-kubernetes-pki-ca.crt --config /etc/kubernetes/kubeadm-config.yaml'
 KUBEADM_WORKER_JOIN_COMMAND='/var/opt/bin/kubeadm join ${APISERVER_ENDPOINT} --ignore-preflight-errors=FileAvailable--etc-kubernetes-pki-ca.crt --config /etc/kubernetes/kubeadm-config.yaml'
+
+
 
 cert_dir="$CURRENT_DIR/certs"
 
@@ -101,6 +116,7 @@ for vm in ${vms[*]}; do
                         | butane)
                 - inline: |-
                     $(cat $BUTANE_STATIC_DIR/butane-crio.yaml \
+                        | sed "s+###CRIO_INSTALLER_URL###+$CRIO_INSTALLER_URL+g" \
                         | sed "s+###CRIO_VERSION###+$CRIO_VERSION+g" \
                         | butane)
                 - inline: |-
@@ -119,6 +135,9 @@ for vm in ${vms[*]}; do
                         | butane)
                 - inline: |-
                     $(cat $BUTANE_STATIC_DIR/butane-kubeadm.yaml \
+                        | sed "s+###KUBEADM_INSTALLER_URL###+$KUBEADM_INSTALLER_URL+g" \
+                        | sed "s+###KUBELET_SERVICE_INSTALLER_URL###+$KUBELET_SERVICE_INSTALLER_URL+g" \
+                        | sed "s+###KUBEADM_DROPIN_INSTALLER_URL###+$KUBEADM_DROPIN_INSTALLER_URL+g" \
                         | sed "s+###FLOATINGIP###+$IP_FLOATING+g" \
                         | sed "s+###K8S_VERSION###+$K8S_VERSION+g" \
                         | sed "s+###FIRSTNODE_IP###+$IP_RANGE_CONTROLPLANE1+g" \
@@ -140,6 +159,7 @@ for vm in ${vms[*]}; do
                         | sed "s+###CILIUM_VERSION###+$CILIUM_VERSION+g" \
                         | sed "s+###FLOATINGIP###+$IP_FLOATING+g" \
                         | sed "s+###POD_CIDR###+$POD_CIDR+g" \
+                        | sed "s+###HOST_CIDR###+$IP_SUBNET+g" \
                         | butane)
 EOF
 
@@ -157,6 +177,7 @@ EOF
                 #         | sed "s+###CILIUM_VERSION###+$CILIUM_VERSION+g" \
                 #         | sed "s+###FLOATINGIP###+$IP_FLOATING+g" \
                 #         | sed "s+###POD_CIDR###+$POD_CIDR+g" \
+                #         | sed "s+###HOST_CIDR###+$IP_SUBNET+g" \
                 #         | butane)
 
      elif [[ "$K8S_MODE" == "controlplane"  ]]; then
@@ -178,6 +199,7 @@ EOF
                         | butane)
                 - inline: |-
                     $(cat $BUTANE_STATIC_DIR/butane-crio.yaml \
+                        | sed "s+###CRIO_INSTALLER_URL###+$CRIO_INSTALLER_URL+g" \
                         | sed "s+###CRIO_VERSION###+$CRIO_VERSION+g" \
                         | butane)
                 - inline: |-
@@ -196,6 +218,9 @@ EOF
                         | butane)
                 - inline: |-
                     $(cat $BUTANE_STATIC_DIR/butane-kubeadm.yaml \
+                        | sed "s+###KUBEADM_INSTALLER_URL###+$KUBEADM_INSTALLER_URL+g" \
+                        | sed "s+###KUBELET_SERVICE_INSTALLER_URL###+$KUBELET_SERVICE_INSTALLER_URL+g" \
+                        | sed "s+###KUBEADM_DROPIN_INSTALLER_URL###+$KUBEADM_DROPIN_INSTALLER_URL+g" \
                         | sed "s+###FLOATINGIP###+$IP_FLOATING+g" \
                         | sed "s+###K8S_VERSION###+$K8S_VERSION+g" \
                         | sed "s+###FIRSTNODE_IP###+$IP_RANGE_CONTROLPLANE1+g" \
@@ -232,6 +257,7 @@ EOF
                         | butane)
                 - inline: |-
                     $(cat $BUTANE_STATIC_DIR/butane-crio.yaml \
+                        | sed "s+###CRIO_INSTALLER_URL###+$CRIO_INSTALLER_URL+g" \
                         | sed "s+###CRIO_VERSION###+$CRIO_VERSION+g" \
                         | butane)
                 - inline: |-
@@ -239,6 +265,9 @@ EOF
                         | butane)
                 - inline: |-
                     $(cat $BUTANE_STATIC_DIR/butane-kubeadm.yaml \
+                        | sed "s+###KUBEADM_INSTALLER_URL###+$KUBEADM_INSTALLER_URL+g" \
+                        | sed "s+###KUBELET_SERVICE_INSTALLER_URL###+$KUBELET_SERVICE_INSTALLER_URL+g" \
+                        | sed "s+###KUBEADM_DROPIN_INSTALLER_URL###+$KUBEADM_DROPIN_INSTALLER_URL+g" \
                         | sed "s+###FLOATINGIP###+$IP_FLOATING+g" \
                         | sed "s+###K8S_VERSION###+$K8S_VERSION+g" \
                         | sed "s+###FIRSTNODE_IP###+$IP_RANGE_CONTROLPLANE1+g" \
