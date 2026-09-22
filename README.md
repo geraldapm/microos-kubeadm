@@ -2,6 +2,12 @@
 
 This repository contains the quick way to deploy a Kubeadm basic HA cluster with OpenSUSE MicroOS. It is intended to be recycleable and minimizing the requirement to intervene manually during Kubeadm installation. Just sit down, grab some drinks, and enjoy the process. Easily creatable and destroyable Kubeadm cluster.
 
+## Specification
+- OS: openSUSE Leap Micro 6.2
+- Kubernetes Vanilla v1.37.0
+- CRI-O v1.37.0
+- Cilium v1.20.2
+
 ## Prerequisites
 
 - An Installed Linux System with KVM capabilities
