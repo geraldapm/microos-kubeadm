@@ -37,6 +37,7 @@ systemd:
               --set k8sServiceHost=${API_SERVER_IP} \
               --set k8sServicePort=${API_SERVER_PORT} \
               --set ipam.operator.clusterPoolIPv4PodCIDRList="${POD_CIDR}";\
+              --set cni.exclusive=false \
               --set nodePort.addresses="${HOST_CIDR}"'
         RemainAfterExit=true
 

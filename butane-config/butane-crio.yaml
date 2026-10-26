@@ -33,6 +33,7 @@ storage:
       contents:
         inline: |
           [crio.runtime]
+          selinux = true
           default_runtime = "runc"
 
           [crio.image]

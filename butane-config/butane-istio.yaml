@@ -1,0 +1,29 @@
+variant: fcos
+version: 1.5.0
+systemd:
+  units:
+    - name: install-istio.service
+      enabled: true
+      contents: |-
+        [Unit]
+        Description=Install Istioctl and Deploy Istio Ambient Mode
+        Documentation=https://istio.io/latest/docs/ops/ambient/getting-started/
+        After=network-online.target syslog.target setup-kubeadm.service
+        Wants=network-online.target setup-kubeadm.service
+        Requires=setup-kubeadm.service
+
+        [Service]
+        Type=oneshot
+        Environment="KUBECONFIG=/etc/kubernetes/admin.conf"
+        ExecStart=/bin/bash -c '\
+          curl -L https://istio.io/downloadIstio | sh - && \
+          ISTIO_DIR=$$(ls -d istio-* | tail -n 1) && \
+          cp "$$ISTIO_DIR/bin/istioctl" /usr/local/bin/istioctl && \
+          chmod +x /usr/local/bin/istioctl && \
+          rm -rf "$$ISTIO_DIR" && \
+          /usr/local/bin/istioctl install --set profile=ambient -y'
+        WorkingDirectory=/tmp
+        RemainAfterExit=no
+
+        [Install]
+        WantedBy=multi-user.target

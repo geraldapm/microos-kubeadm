@@ -1,0 +1,22 @@
+variant: fcos
+version: 1.5.0
+systemd:
+  units:
+    - name: install-helm.service
+      enabled: true
+      contents: |-
+        [Unit]
+        Description=Install/Update Helm Binary
+        Documentation=https://helm.sh/docs/intro/install/
+        After=network-online.target
+        Wants=network-online.target
+
+        [Service]
+        Type=oneshot
+        TimeoutStartSec=2400
+        ExecStart=/bin/bash -c '\
+          curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash'
+        RemainAfterExit=no
+
+        [Install]
+        WantedBy=multi-user.target

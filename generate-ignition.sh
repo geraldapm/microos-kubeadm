@@ -154,6 +154,12 @@ for vm in ${vms[*]}; do
                         | sed "s+###IP_ADDRESS###+$IP_ADDR+g" \
                         | butane)
                 - inline: |-
+                    $(cat $BUTANE_STATIC_DIR/butane-helm.yaml \
+                        | butane)
+                - inline: |-
+                    $(cat $BUTANE_STATIC_DIR/butane-istio.yaml \
+                        | butane)
+                - inline: |-
                     $(cat $BUTANE_STATIC_DIR/butane-cilium.yaml \
                         | sed "s+###CILIUM_CLI_VERSION###+$CILIUM_CLI_VERSION+g" \
                         | sed "s+###CILIUM_VERSION###+$CILIUM_VERSION+g" \
