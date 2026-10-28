@@ -10,6 +10,7 @@ systemd:
         Documentation=https://helm.sh/docs/intro/install/
         After=network-online.target
         Wants=network-online.target
+        ConditionPathExists=!/usr/local/bin/helm
 
         [Service]
         Type=oneshot

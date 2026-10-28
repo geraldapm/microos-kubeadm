@@ -11,6 +11,7 @@ systemd:
         After=network-online.target syslog.target setup-kubeadm.service
         Wants=network-online.target setup-kubeadm.service
         Requires=setup-kubeadm.service
+        ConditionPathExists=!/usr/local/bin/istioctl
 
         [Service]
         Type=oneshot
